@@ -1,8 +1,10 @@
 # server.R
 
 source("ultilityfunctions.R")
-#source("AppDataFunc.R")
+source("AppDataFunc.R")
 library(shiny)
+
+# Written by Ashish Soni
 
 #reactive
 shinyServer(function(input, output,session){
@@ -17,12 +19,10 @@ shinyServer(function(input, output,session){
     
     }else if(app_genre=="Health & Fitness"){
       app_publisher<-c("Northcube AB","Ariyana Felfeli", "Weight Watchers International, Inc.")
-#     "Sleep Cycle alarm clock"
-#     "7 Minute Workout Challenge"
-#     "Weight Watchers"
+
     
     }else if(app_genre=="Productivity"){
-      app_publisher<-c("Ginger Labs, Inc.")           #"Notability"
+      app_publisher<-c("Ginger Labs, Inc.")           
 
     }else if(app_genre=="Social Networking"){
       app_publisher<-c("eHarmony.com","MeetMe, Inc.")
