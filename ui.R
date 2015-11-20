@@ -1,6 +1,5 @@
 library(shiny)
-
-# Written by Ashish Soni
+library(shinyBS)
 
 shinyUI(fluidPage(
   
@@ -58,14 +57,30 @@ shinyUI(fluidPage(
                                                    "MARS" = "MARS"),
                                        selected = "SVM",
                                        selectize=F),
+                            
+                           bsTooltip("model", "Predictive Models to choose","right", options = list(container = "body")),
                             br(),                          
-                            sliderInput("daystoforecast", "Number of days to forcast :", min=1, max=30, value = 15)
+                            sliderInput("daystoforecast", "Number of days to forcast :", min=1, max=30, value = 15),
+                            checkboxGroupInput("Attributes", "Plot other Attributes:",
+                                              c("Delt1"="Delt1",
+                                                "Delt2"="Delt2",
+                                                "Delt3"="Delt3",
+                                                "Delt4"="Delt4",
+                                                "Delt5"="Delt5",
+                                                "volatility"="Volat",
+                                                "EMA" = "EMA",
+                                                "None"=""),
+                                               selected = "None"),
+                            
+                            bsTooltip("Attributes", "Attributes other than Rank","right", options = list(container = "body"))
                            
                          ),
                          mainPanel(
-                           plotOutput("RankPlot"),
+                           #plotOutput("RankPlot"),
+                           dygraphOutput("RankPlot2"),
                                    tabsetPanel(
-                                     tabPanel('Forecasted App Rank',tableOutput('Forecast'))
+                                     tabPanel('Forecasted App Rank',tableOutput('Forecast')),
+                                     tabPanel('Historical App Data',tableOutput('Data'))
                                    )
                          )
                   )              

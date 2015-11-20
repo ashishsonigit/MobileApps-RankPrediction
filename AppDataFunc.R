@@ -1,8 +1,7 @@
 library(dplyr)
 library(plyr)
 
-
-# Written by Ashish Soni
+## 1 Access Data Source 
 
 appDet <- read.csv("application_details.csv", header=TRUE,sep=",")
 colnames(appDet)<-c("Genre","app_id","app_name","download_size","publisher","device",paste0("Inf",1:5))
@@ -36,19 +35,6 @@ releasedate <- read.csv("release_date.csv", header=F,sep=",")
 colnames(releasedate) <- c("Genre","app_id","Date")
 releasedate<-arrange(releasedate,Genre,app_id,Date)
 
-# app ids with most entries
-#list_free_appIDs<-((as.data.frame(table(freerank$app_id)) %>% arrange(desc(Freq),Var1)))[1]
-#id<-as.numeric(as.character(list_free_appIDs[i,]))
-#range<-"2015-01-01/2015-12-31"
-
-# 
- choices = c("King.com Limited","Activision Publishing, Inc.", "Electronic Arts Inc.")
-# 
-# # for(i in 1:length(choices)){
-#    publisher_name<-choices[i]
-#    Pub_info<-unique(subset(appDet, publisher == publisher_name, c(1,2,3,6)))
-#    app_names<-as.data.frame(Pub_info$app_name)
-#    save(app_names,file=paste0("./data/",paste0(strsplit(choices[i]," ")[[1]][1],".RData")))
-# }
+choices = c("King.com Limited","Activision Publishing, Inc.", "Electronic Arts Inc.")
 
 

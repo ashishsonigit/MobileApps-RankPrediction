@@ -6,9 +6,6 @@ library(DMwR)
 library(earth)
 library(rpart)
 
-# Written by : Ashish Soni
-
-
 SVMparlist<-list(cost=10,gamma=0.01)
 RFparlist<-list(ntree=500)
 

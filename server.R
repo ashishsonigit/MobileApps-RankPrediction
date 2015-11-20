@@ -1,10 +1,9 @@
 # server.R
 
 source("ultilityfunctions.R")
-source("AppDataFunc.R")
+#source("AppDataFunc.R")
 library(shiny)
-
-# Written by Ashish Soni
+library(dygraphs)
 
 #reactive
 shinyServer(function(input, output,session){
@@ -20,9 +19,8 @@ shinyServer(function(input, output,session){
     }else if(app_genre=="Health & Fitness"){
       app_publisher<-c("Northcube AB","Ariyana Felfeli", "Weight Watchers International, Inc.")
 
-    
     }else if(app_genre=="Productivity"){
-      app_publisher<-c("Ginger Labs, Inc.")           
+      app_publisher<-c("Ginger Labs, Inc.")
 
     }else if(app_genre=="Social Networking"){
       app_publisher<-c("eHarmony.com","MeetMe, Inc.")
@@ -270,7 +268,12 @@ shinyServer(function(input, output,session){
     forecastRank()$df
     
   })
-
+  
+  output$Data<-renderTable({
+    
+    forecastRank()$initdata
+    
+  })
   
    
   output$RankPlot <- renderPlot({
@@ -291,6 +294,30 @@ shinyServer(function(input, output,session){
     lines(Pred, col="red")
     points(Pred, col = colInd)
     legend("topleft", inset=.05,c("Historical","Forecasted"), fill=c("black","green"), horiz=TRUE)
+    
+  })
+  
+
+
+  output$RankPlot2 <-renderDygraph({
+    data<-as.xts(forecastRank()$initdata,as.Date(rownames(forecastRank()$initdata)))
+
+    colnames(data)[1] <- "Historical"
+    
+    start_date<-forecastRank()$start_date
+    end_date<-forecastRank()$end_date
+    rank <- forecastRank()$df 
+    Pred<-as.xts(rank$ForecastedRank,as.Date(rownames(rank)))
+    colnames(Pred)[1] <- "Forecasted"
+    
+    AttributesToPlot<-"Historical"
+    if (input$Attributes!="") 
+      AttributesToPlot<-c("Historical",input$Attributes[which(input$Attributes!="")])
+    else
+        AttributesToPlot<-"Historical"
+      
+    dygraph(cbind(data[,AttributesToPlot],Pred),main=paste("App rank of :",input$AppName), ylab="Rank", xlab="Date") 
+
     
   })
   
