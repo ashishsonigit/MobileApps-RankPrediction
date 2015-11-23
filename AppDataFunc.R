@@ -35,6 +35,3 @@ releasedate <- read.csv("release_date.csv", header=F,sep=",")
 colnames(releasedate) <- c("Genre","app_id","Date")
 releasedate<-arrange(releasedate,Genre,app_id,Date)
 
-choices = c("King.com Limited","Activision Publishing, Inc.", "Electronic Arts Inc.")
-
-

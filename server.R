@@ -4,6 +4,11 @@ source("ultilityfunctions.R")
 #source("AppDataFunc.R")
 library(shiny)
 library(dygraphs)
+library(googleVis) 
+
+removeDuplicates<-function(df){
+}
+
 
 #reactive
 shinyServer(function(input, output,session){
@@ -44,6 +49,7 @@ shinyServer(function(input, output,session){
     appDet$app_name<-as.character(appDet$app_name)
     Pub_info<-as.data.frame(unique(subset(appDet, publisher == publisher_name, c(1,2,3,6))))
     app_names<-Pub_info$app_name
+    
     app_names
   })
   
@@ -51,12 +57,13 @@ shinyServer(function(input, output,session){
     updateSelectInput(session,"AppName", choices = app_names())
   })
   
+  
   AppRankdata<-reactive({
   
     publisher_name<-input$AppPublisher
   
     Pub_info<-as.data.frame(unique(subset(appDet, publisher == publisher_name, c(1,2,3,6))))
-    id<-Pub_info$app_id
+    #id<-Pub_info$app_id
     Genreid<-Pub_info$Genre
     app_names<-as.data.frame(Pub_info$app_name)
     
@@ -70,7 +77,6 @@ shinyServer(function(input, output,session){
     xtp<-as.xts(tp$Rank,as.Date(tp$Date))
     xtf<-as.xts(tf$Rank,as.Date(tf$Date))
     xtg<-as.xts(tg$Rank,as.Date(tg$Date))
-    
     
     return(list(paid=xtp,free=xtf,grossing=xtg))
 })
@@ -100,11 +106,17 @@ shinyServer(function(input, output,session){
     if(nrow(AppRankdata()$grossing)==0){
       text3<-"Top grossing data  NOT AVAILABLE"
     }else{
-      text3="Top grossing data AVAILABLE"
+      text3<-"Top grossing data AVAILABLE"
       grossing_data=1
     }
-    
-    if(free_data==0&paid_data==0&grossing_data==0)choices=c("Data Not Avalilable for this App")
+    flag<-1
+    text4=""
+    if(free_data==0&paid_data==0&grossing_data==0){
+      choices=c("Data Not Avalilable for this App")
+      flag<-0
+      text4<-"Data Not Avalilable for this App to forecast"
+    }
+      
     if(free_data==0&paid_data==0&grossing_data==1)choices=c("Top Grossings")
     if(free_data==0&paid_data==1&grossing_data==0)choices=c("Top Paid")
     if(free_data==0&paid_data==1&grossing_data==1)choices=c("Top Paid","Top Grossings")
@@ -112,27 +124,296 @@ shinyServer(function(input, output,session){
     if(free_data==1&paid_data==0&grossing_data==1)choices=c("Top Free","Top Grossings")
     if(free_data==1&paid_data==1&grossing_data==0)choices=c("Top Free","Top Paid")
     if(free_data==1&paid_data==1&grossing_data==1)choices=c("Top Free","Top Paid","Top Grossings")
-    
-    return(list(text1=text1,text2=text2,text3=text3,free_data,paid_data,grossing_data,choices=choices))
+
+    return(list(text1=text1,text2=text2,text3=text3,text4=text4,free_data,paid_data,grossing_data,choices=choices,flag=flag))
     
   })
   
-  
+
   observe({
     updateSelectInput(session,"AppCategory", choices = app_category_info()$choices)
   })
   
+  output$flag <- reactive({
+    app_category_info()$flag
+  })
+  
+  outputOptions(output, 'flag', suspendWhenHidden=FALSE)
   
   output$text<-renderUI({
     
     text1<-app_category_info()$text1
     text2<-app_category_info()$text2
     text3<-app_category_info()$text3
-    HTML(paste(text1,text2,text3,sep = '<br/>'))
+    text4<-app_category_info()$text4
+    HTML(paste(text1,text2,text3,text4,sep = '<br/>'))
     
   })
 
- forecastRank<-reactive({
+
+  output$gvMotion <- renderGvis({
+    
+    publisher_name<-input$AppPublisher
+    
+    Pub_info<-as.data.frame(unique(subset(appDet, publisher == publisher_name, c(1,2,3,6))))
+    
+    id<-Pub_info$app_id
+    Genreid<-Pub_info$Genre
+    app_names<-as.data.frame(Pub_info$app_name)
+    
+    #     Nid <-length(Pub_info$app_id)
+    #     for(i in 1:Nid){
+    #       app_name<-Pub_info$app_name[i]
+    #       app_id<-Pub_info$app_id[i]
+    #       tp<-paid[which(paid$app_id==id),c("Date","Rank")]%>% arrange(Date,Rank)
+    #       tf<-freerank[which(freerank$app_id==id),c("Date","Rank")]%>% arrange(Date,Rank)
+    #       tg<-topgross[which(topgross$app_id==id),c("Date","Rank")] %>% arrange(Date,Rank)
+    #       lst<-list(list(app_name,app_id,tp,tf,tg))
+    #       if(i==1) L<-lst else L<-c(L,lst)
+    #     }
+    
+    
+    id<-as.numeric(Pub_info$app_id)
+    
+    tp<-paid[which(paid$app_id==id),c("Date","Rank","app_id")]%>% arrange(Date,Rank)
+    tf<-freerank[which(freerank$app_id==id),c("Date","Rank","app_id")]%>% arrange(Date,Rank)
+    tg<-topgross[which(topgross$app_id==id),c("Date","Rank","app_id")] %>% arrange(Date,Rank)
+    
+    tf$Date<-as.Date(tf$Date)
+    tp$Date<-as.Date(tp$Date)
+    tg$Date<-as.Date(tg$Date)
+    
+    ntp<-nrow(tp)
+    ntf<-nrow(tf)
+    ntg<-nrow(tg)
+  
+    flag<-0
+    if(ntf!=0)type<-"Top Free"
+    if(ntp!=0)type<-"Top Paid"
+    if(ntg!=0)type<-"Top Grossings"
+    if(ntf==0&ntp==0&ntg==0)flag=1
+    
+    if(flag!=1){
+    
+     if(type=="Top Free")  df<-tf
+     if (type=="Top Paid") df<-tp
+     if (type=="Top Grossings") df<-tg
+     
+
+    df<-xts(df,as.Date(as.character.Date(df$Date)))
+    # Take average of ranks on duplicated dates 
+    date_index=index(df$Rank[which(duplicated(index(df$Rank))),])
+    
+    
+    for(i in 1:length(date_index)){
+      df$Rank[date_index[i]]<-as.character(mean(as.numeric(df$Rank[date_index[i]])))
+    }
+    
+    
+    #remove duplicates
+    df<-df[!duplicated(index(df$Rank)), ]
+    
+    
+    #tp<-removeDuplicates(tp)
+    
+       if(type=="Top Free"){
+         tf<-data.frame(df)
+         tf$Date<-as.Date(tf$Date)
+         tf$Rank<-as.numeric(tf$Rank)
+         m<-gvisMotionChart(tf,idvar="app_id",timevar = "Date",yvar="Rank")
+       }else if (type=="Top Paid"){
+         tp<-data.frame(df)
+         tp$Date<-as.Date(tp$Date)
+         tp$Rank<-as.numeric(tp$Rank)
+         m<-gvisMotionChart(tp,idvar="app_id",timevar = "Date",yvar="Rank")
+       }else if (type=="Top Grossings"){
+         tg<-data.frame(df)
+         tg$Date<-as.Date(tg$Date)
+         tg$Rank<-as.numeric(tg$Rank)
+         m<-gvisMotionChart(tg,idvar="app_id",timevar = "Date",yvar="Rank")
+       }else{
+         browser()
+         tf<-data.frame(df)
+         tf$Date<-as.Date(tf$Date)
+         tf$Rank<-as.numeric(tf$Rank)
+         m<-gvisMotionChart(tf,idvar="app_id",timevar = "Date",yvar="Rank")
+       }  
+       if(input$motionchart)plot(m)
+        return(m)
+    }
+    
+  })
+  
+  
+  prediction<-reactive({
+    
+    AppPublisher<-input$AppPublisher
+    
+    type<-input$AppCategory
+    
+    if(type=="Top Free")rank<-AppRankdata()$free
+    else if (type=="Top Paid")rank<-AppRankdata()$paid
+    else if (type=="Top Grossings")rank<-AppRankdata()$grossing
+    else rank<-AppRankdata()$free
+    
+    
+    # Take average of ranks on duplicated dates 
+    date_index=index(rank[which(duplicated(index(rank))),])
+    for(i in 1:length(date_index)){
+      rank[date_index[i]]<-mean(rank[date_index[i]])
+    }
+    
+    #remove duplicates
+    rank<-rank[!duplicated(index(rank)), ]
+    
+    # time period
+    range<-as.Date(min(index(rank)):max(index(rank)))
+    
+    start_date<-min(index(rank))
+    end_date<-max(index(rank))
+    
+    # set missing Rank information to previous date or next date
+    for(i in range){
+      if(nrow(rank[range[i]]==0)){
+        if(i>0) 
+          rank[i]=rank[i-1]
+        else 
+          rank[i]=rank[i+1]
+      }
+    }
+    
+    # closing rank of App from 2015-01-01
+    #clrank<-do.call("Cl",list(as.name(AppName)))['2015-01-01/']
+    p<-rank
+    data <- as.data.frame(cbind(Next(p),Delt(p,k=1:5),volatility(p),EMA(p)))
+    
+    
+    colnames(data) <-c('rank',paste0("Delt",1:5),'Volat','EMA')
+    
+    rownames(data)<-index(p)+1
+    
+    # The latest rank is NA in data. This is the target which has to be predicted. 
+    # We set this latest rank to 0 and will replace it with predicted rank.
+    data[nrow(data),1]<-0
+    
+    
+    # notice first few rows have NA aswell as the latest rank to predict is NA
+    # Hence we will discard these rows  
+    data<-na.omit(data)
+    
+    model<-input$modelPerf
+    
+    formula <-as.formula(rank ~ .)
+    
+    if(model=='SVM'){
+      wf <- wf1
+    } else if(model=='Random Forest'){
+      wf <- wf2
+    } else if(model=='LM'){
+      wf <- wf3
+    } else if(model=='Decison Trees(Rpart)'){
+      wf <- wf4
+    } else if(model=='custom Workflow'){
+      wf <- wf5
+    } else if(model=='MARS'){
+      wf <- wf6
+    } else {
+      # default
+      wf <- wf1
+    }
+    
+    L=nrow(data)
+    P=round(input$partition*L/100)
+    start <- 1
+    tr <- start:(start+P-1)
+    ts <- (start+P):(start+L-1)
+    train = data[tr,]
+    holdOut = data[ts,]
+    
+    
+    # Predict rank of lastest closing rank 
+    out <- runWorkflow(wf,formula,train,holdOut)
+    preds<-ceiling(out$preds)
+    true<-out$true
+    
+    df<-cbind(preds,true)
+    colnames(df)<-c('PredRank','TrueRank')
+    
+    df<-data.frame(df)
+    return(list(df=df,tr=train,ts=holdOut))
+    
+  })
+  
+  
+  output$TrainTable<-renderTable({
+    #if(input$goButton)
+    prediction()$tr
+  })
+  
+  output$HoldOutTestTable<-renderTable({
+    #if(input$goButton)
+    prediction()$ts
+  })
+  
+  
+  ModelPerf<-reactive({  
+    
+    train<-prediction()$tr
+    rownames(train)<-index(train)
+    task<-PredTask(as.formula(rank ~ .),train,'Rank')
+    spExp<-performanceEstimation(task,
+                                 c(wf1,wf2,wf3,wf4,wf5,wf6),
+                                 EstimationTask(metrics=input$metrics,
+                                                method=MonteCarlo(nReps=10,szTrain=0.5,szTest=0.25)))
+     spExp
+})
+  
+  output$Performance<-renderPlot({  
+    spExp<-ModelPerf()
+    plot(spExp)
+  })
+  
+  output$topPerformer<-renderTable({  
+    spExp<-ModelPerf()
+    top<-topPerformers(spExp)
+    top$Rank
+  })
+  
+  output$ModelSummary<-renderTable({  
+    spExp<-ModelPerf()
+    s<-summary(spExp)
+    df<-data.frame(s$Rank)
+    colnames(df)<-names(s$Rank)
+    df
+  })
+    
+  output$Prediction<-renderTable({  
+    #if(input$goButton)
+    prediction()$df
+  })
+  
+  output$RankModels<-renderTable({  
+    spExp<-ModelPerf()
+    s<-rankWorkflows(spExp)
+    df<-s$Rank[[1]]
+    df
+  })
+  
+  output$PlotPredictedHoldOut <-renderDygraph({
+    data<-as.xts(prediction()$df,as.Date(rownames(prediction()$df)))
+    traintest<-as.xts(prediction()$tr,as.Date(rownames(prediction()$tr)))
+    traintest<-traintest[,1]
+    colnames(traintest)[1] <- "Train-TestSet"
+    out<-cbind(data,traintest)
+    dygraph(out,main=paste("Rank Prediction on Holdout set",input$AppName), ylab="Rank", xlab="Date") 
+    
+  })
+  
+  
+  #cbind(data,Pred)
+    
+  
+   forecastRank<-reactive({
    
   AppPublisher<-input$AppPublisher
 
@@ -254,7 +535,7 @@ shinyServer(function(input, output,session){
 
   }
   
-  frank<-data.frame(floor(df$rank))
+  frank<-data.frame(ceiling(df$rank))
   rownames(frank)<-rownames(df)
   colnames(frank)<-c("ForecastedRank")
   forecast<-tail(frank,input$daystoforecast)
