@@ -1,7 +1,6 @@
 # server.R
 
 source("ultilityfunctions.R")
-#source("AppDataFunc.R")
 library(shiny)
 library(dygraphs)
 library(googleVis) 
@@ -13,6 +12,23 @@ removeDuplicates<-function(df){
 #reactive
 shinyServer(function(input, output,session){
 
+  output$loaddata <- renderPrint({
+    input$action
+    isolate({
+      source("AppDataFunc.R")
+      if(is.null(appDet)){
+        text1<-"App dataset not loaded. Please wait...."
+      } else {
+        text1="App dataset is Loaded. Now proceed to analytics"
+      }
+      HTML(paste(text1,sep = '<br/>'))
+    })
+  })
+  
+  output$loaded <- reactive({
+    return(!is.null(appDet))
+  })
+  outputOptions(output, 'loaded', suspendWhenHidden=FALSE)
   
   app_publisher_info<-reactive({
     
@@ -161,6 +177,7 @@ shinyServer(function(input, output,session){
     Genreid<-Pub_info$Genre
     app_names<-as.data.frame(Pub_info$app_name)
     
+    
     #     Nid <-length(Pub_info$app_id)
     #     for(i in 1:Nid){
     #       app_name<-Pub_info$app_name[i]
@@ -175,17 +192,23 @@ shinyServer(function(input, output,session){
     
     id<-as.numeric(Pub_info$app_id)
     
-    tp<-paid[which(paid$app_id==id),c("Date","Rank","app_id")]%>% arrange(Date,Rank)
-    tf<-freerank[which(freerank$app_id==id),c("Date","Rank","app_id")]%>% arrange(Date,Rank)
-    tg<-topgross[which(topgross$app_id==id),c("Date","Rank","app_id")] %>% arrange(Date,Rank)
+    
+    tp0<-paid[which(paid$app_id==id),c("Date","Rank","app_id")]%>% arrange(Date,Rank)
+    tp<-merge(tp0, Pub_info[,c("app_id","app_name")], by.x=c("app_id"),by.y=c("app_id"),all=TRUE)
+    
+    tf0<-freerank[which(freerank$app_id==id),c("Date","Rank","app_id")]%>% arrange(Date,Rank)
+    tf<-merge(tf0, Pub_info[,c("app_id","app_name")], by.x=c("app_id"),by.y=c("app_id"),all=TRUE)
+    
+    tg0<-topgross[which(topgross$app_id==id),c("Date","Rank","app_id")] %>% arrange(Date,Rank)
+    tg<-merge(tg0, Pub_info[,c("app_id","app_name")], by.x=c("app_id"),by.y=c("app_id"),all=TRUE)
     
     tf$Date<-as.Date(tf$Date)
     tp$Date<-as.Date(tp$Date)
     tg$Date<-as.Date(tg$Date)
     
-    ntp<-nrow(tp)
-    ntf<-nrow(tf)
-    ntg<-nrow(tg)
+    ntp<-nrow(tp0)
+    ntf<-nrow(tf0)
+    ntg<-nrow(tg0)
   
     flag<-0
     if(ntf!=0)type<-"Top Free"
@@ -199,7 +222,7 @@ shinyServer(function(input, output,session){
      if (type=="Top Paid") df<-tp
      if (type=="Top Grossings") df<-tg
      
-
+    df<-na.omit(df)
     df<-xts(df,as.Date(as.character.Date(df$Date)))
     # Take average of ranks on duplicated dates 
     date_index=index(df$Rank[which(duplicated(index(df$Rank))),])
@@ -213,30 +236,26 @@ shinyServer(function(input, output,session){
     #remove duplicates
     df<-df[!duplicated(index(df$Rank)), ]
     
-    
-    #tp<-removeDuplicates(tp)
-    
        if(type=="Top Free"){
          tf<-data.frame(df)
          tf$Date<-as.Date(tf$Date)
          tf$Rank<-as.numeric(tf$Rank)
-         m<-gvisMotionChart(tf,idvar="app_id",timevar = "Date",yvar="Rank")
+         m<-gvisMotionChart(tf,idvar="app_name",timevar = "Date",yvar="Rank",colorvar = "Rank")
        }else if (type=="Top Paid"){
          tp<-data.frame(df)
          tp$Date<-as.Date(tp$Date)
          tp$Rank<-as.numeric(tp$Rank)
-         m<-gvisMotionChart(tp,idvar="app_id",timevar = "Date",yvar="Rank")
+         m<-gvisMotionChart(tp,idvar="app_name",timevar = "Date",yvar="Rank",colorvar = "Rank")
        }else if (type=="Top Grossings"){
          tg<-data.frame(df)
          tg$Date<-as.Date(tg$Date)
          tg$Rank<-as.numeric(tg$Rank)
-         m<-gvisMotionChart(tg,idvar="app_id",timevar = "Date",yvar="Rank")
+         m<-gvisMotionChart(tg,idvar="app_name",timevar = "Date",yvar="Rank",colorvar = "Rank")
        }else{
-         browser()
          tf<-data.frame(df)
          tf$Date<-as.Date(tf$Date)
          tf$Rank<-as.numeric(tf$Rank)
-         m<-gvisMotionChart(tf,idvar="app_id",timevar = "Date",yvar="Rank")
+         m<-gvisMotionChart(tf,idvar="app_name",timevar = "Date",yvar="Rank",colorvar = "Rank")
        }  
        if(input$motionchart)plot(m)
         return(m)
@@ -360,12 +379,20 @@ shinyServer(function(input, output,session){
     
     train<-prediction()$tr
     rownames(train)<-index(train)
+    train<-data.frame(train)
+#     path<-paste0(getwd(),"/train.csv",sep="")
+#     browser()
+#     write.csv(train, file = path, row.names = FALSE)
+#     train <- read.csv(path, row.names=NULL, stringsAsFactors=FALSE)
     task<-PredTask(as.formula(rank ~ .),train,'Rank')
+    #file.remove(path)
     spExp<-performanceEstimation(task,
                                  c(wf1,wf2,wf3,wf4,wf5,wf6),
                                  EstimationTask(metrics=input$metrics,
                                                 method=MonteCarlo(nReps=10,szTrain=0.5,szTest=0.25)))
-     spExp
+    
+    spExp
+    
 })
   
   output$Performance<-renderPlot({  
@@ -388,7 +415,6 @@ shinyServer(function(input, output,session){
   })
     
   output$Prediction<-renderTable({  
-    #if(input$goButton)
     prediction()$df
   })
   
@@ -409,11 +435,7 @@ shinyServer(function(input, output,session){
     
   })
   
-  
-  #cbind(data,Pred)
-    
-  
-   forecastRank<-reactive({
+  forecastRank<-reactive({
    
   AppPublisher<-input$AppPublisher
 
@@ -584,7 +606,6 @@ shinyServer(function(input, output,session){
     data<-as.xts(forecastRank()$initdata,as.Date(rownames(forecastRank()$initdata)))
 
     colnames(data)[1] <- "Historical"
-    
     start_date<-forecastRank()$start_date
     end_date<-forecastRank()$end_date
     rank <- forecastRank()$df 

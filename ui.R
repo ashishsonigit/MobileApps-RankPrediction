@@ -1,11 +1,27 @@
 library(shiny)
 library(shinyBS)
 library(googleVis)
+library(dygraphs)
 
 shinyUI(fluidPage(
   
-  tabsetPanel("App Publisher & Product",
-              tabPanel("Mobile App Data ",
+  tabsetPanel(
+              "Load Data",
+             tabPanel("Start",
+                       titlePanel("Load sample App Dataset"),
+                  sidebarLayout(
+                    sidebarPanel(
+                      actionButton("action", "Load Data"),
+                      helpText("Note: Please wait for approx 1min to load the sample data and other panels get enabled for analytics.")
+                    ),    
+                    mainPanel(
+                      h5("Dataset loaded:"),
+                      verbatimTextOutput('loaddata')
+                    )
+              )),
+              "App Publisher & Product",  
+              tabPanel("Select Mobile App",
+                  conditionalPanel("output.loaded",
                        titlePanel("Select App Details:"),
                        sidebarLayout(
                          sidebarPanel(
@@ -28,16 +44,13 @@ shinyUI(fluidPage(
                            
                            selectInput("AppName", 
                                        label = "App Name :",
-                                       choices = "Notability",
+                                       choices = "",
                                        selectize=F),
                            
                            selectInput("AppCategory", 
                                        label = "Category :",
                                        choices = "",
-                                       selectize=F)
-                           
-                           
-                                         
+                                       selectize=F)        
                                          
                            ),
                          mainPanel(
@@ -47,11 +60,11 @@ shinyUI(fluidPage(
                              condition="input.motionchart",
                              tableOutput("gvMotion")
                            )
-                           #tableOutput("gvMotion")
-                           #htmlOutput("text")
+                           
                           )
-                         )
-                       ),
+                        )
+                  )
+             ),
               
               "Modeling",         
               tabPanel("Model Performance Estimation",
@@ -122,7 +135,7 @@ shinyUI(fluidPage(
                    conditionalPanel(
                      condition="output.flag=='1'",
                          
-                       titlePanel("Model based forcasting of App Rank"),
+                       titlePanel("Model based App Rank forecast"),
                        sidebarLayout(
                          sidebarPanel(
                            helpText("Select below options to forecast future App rank"), 
@@ -155,7 +168,7 @@ shinyUI(fluidPage(
                            
                          ),
                          mainPanel(
-                           #plotOutput("RankPlot"),
+                          
                            dygraphOutput("RankPlot2"),
                                    tabsetPanel(
                                      tabPanel('Forecasted App Rank',tableOutput('Forecast')),
@@ -166,5 +179,4 @@ shinyUI(fluidPage(
                )
               ) #conditional flag              
           )
-     
 ))

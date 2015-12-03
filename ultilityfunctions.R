@@ -10,6 +10,7 @@ SVMparlist<-list(cost=10,gamma=0.01)
 RFparlist<-list(ntree=500)
 
 
+
 wf1<-Workflow('timeseriesWF',wfID="SVM",predictor='predict',
               pre=c("centralImp","scale"),
               .fullOutput=T,
@@ -43,14 +44,3 @@ wf6<- Workflow('timeseriesWF',wfID="Earth",predictor='predict',
                 type="grow",relearn.step=30,.fullOutput=T,
                 learner="earth")
 
-
-# 
-# train <- read.csv("~/Capstone/MobileAppShiny/train.csv", row.names=NULL, stringsAsFactors=FALSE)
-# 
-# task<-PredTask(as.formula(rank ~ .),train,'Rank')
-# 
-# spExp<-performanceEstimation(task,
-#                              wf1,
-#                              EstimationTask(metrics="theil",
-#                                             method=MonteCarlo(nReps=10,szTrain=0.5,szTest=0.25)))
-# plot(spExp)
