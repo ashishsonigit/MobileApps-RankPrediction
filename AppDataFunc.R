@@ -7,13 +7,13 @@ appDet <- read.csv("application_details.csv", header=TRUE,sep=",")
 colnames(appDet)<-c("Genre","app_id","app_name","download_size","publisher","device",paste0("Inf",1:5))
 appDet$app_name<-as.character(appDet$app_name)
 
-st<-appDet$download_size
-index<-grep("[0-9]",substring(appDet$download_size,1,1))
-appDet<-appDet[index,]
-appDet$download_size<-as.numeric(appDet$download_size)
-index<-which(appDet$download_size>0)
-appDet<-appDet[index,]
-appDet<-appDet[,1:6]
+# st<-appDet$download_size
+# index<-grep("[0-9]",substring(appDet$download_size,1,1))
+# appDet<-appDet[index,]
+# appDet$download_size<-as.numeric(appDet$download_size)
+# index<-which(appDet$download_size>0)
+# appDet<-appDet[index,]
+# appDet<-appDet[,1:6]
 
 topgross<-read.csv("top_grossing_ranking.csv", header=F,sep=",")
 colnames(topgross)<- c("Date","Genre","app_id","Rank")
